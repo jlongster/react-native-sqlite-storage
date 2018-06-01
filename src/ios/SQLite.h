@@ -36,6 +36,7 @@ typedef int WebSQLError;
 
 @property (nonatomic, copy) NSMutableDictionary *openDBs;
 @property (nonatomic, copy) NSMutableDictionary *appDBPaths;
+@property (nonatomic, strong) dispatch_queue_t serialQueue;
 
 // Open / Close
 -(void) open: (NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error;
@@ -48,9 +49,7 @@ typedef int WebSQLError;
 -(void) executeSqlBatch: (NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error;
 
 // Single requests interface
+-(void) backgroundLiteralExec: (NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error;
 -(void) backgroundExecuteSql:(NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error;
 -(void) executeSql:(NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error;
-
-// Echo Test
--(void) echoStringValue:(NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error;
 @end
