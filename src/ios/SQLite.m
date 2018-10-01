@@ -182,8 +182,8 @@ RCT_EXPORT_METHOD(open: (NSString *)filename success:(RCTResponseSenderBlock)suc
 
 RCT_EXPORT_METHOD(close: (NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error)
 {
-  SQLiteResult* pluginResult = nil;
-  @synchronized (self) {
+  [self runInBackground:^{
+    SQLiteResult* pluginResult = nil;
     NSString *dbFileName = options[@"path"];
     if (dbFileName == NULL) {
       // Should not happen:
@@ -196,33 +196,14 @@ RCT_EXPORT_METHOD(close: (NSDictionary *) options success:(RCTResponseSenderBloc
         pluginResult = [SQLiteResult resultWithStatus:SQLiteStatus_ERROR messageAsString:@"Specified db was not open"];
       } else {
         sqlite3 *db = [((NSValue *) dbInfo[@"dbPointer"]) pointerValue];
-        NSString *dbPath = dbInfo[@"dbPath"];
-            
-        if ([[NSFileManager defaultManager] fileExistsAtPath:dbPath]) {
-          RCTLog(@"close: database still exists at path %@, proceeding to close it.",dbPath);
-        }
-            
-        if (db == NULL) {
-          // Should not happen:
-          RCTLog(@"close: db name was not open: %@", dbFileName);
-          pluginResult = [SQLiteResult resultWithStatus:SQLiteStatus_ERROR messageAsString:@"Specified db was not open"];
-        } else {
-          RCTLog(@"close: closing db: %@", dbFileName);
-            sqlite3_close (db);
-            [openDBs removeObjectForKey:dbFileName];
-            pluginResult = [SQLiteResult resultWithStatus:SQLiteStatus_OK messageAsString:@"DB closed"];
-        }
-
-        if ([[NSFileManager defaultManager]fileExistsAtPath:dbPath]) {
-          RCTLog(@"database file still exists after close");
-        } else {
-          RCTLog(@"database file doesn't exists after close");
-        }
+        sqlite3_close (db);
+        [openDBs removeObjectForKey:dbFileName];
+        pluginResult = [SQLiteResult resultWithStatus:SQLiteStatus_OK messageAsString:@"DB closed"];
       }
     }
-  }
-  
-  [pluginResult.status intValue] == SQLiteStatus_OK ? success(@[pluginResult.message]) : error(@[pluginResult.message]);
+
+    [pluginResult.status intValue] == SQLiteStatus_OK ? success(@[pluginResult.message]) : error(@[pluginResult.message]);
+  }];
 }
 
 RCT_EXPORT_METHOD(attach: (NSDictionary *) options success:(RCTResponseSenderBlock)success error:(RCTResponseSenderBlock)error)
@@ -378,7 +359,12 @@ RCT_EXPORT_METHOD(executeSql: (NSDictionary *) options success:(RCTResponseSende
     pluginResult = [self executeSqlWithDict: ex andArgs: dbargs];
   }
   
-  success(@[pluginResult.message]);
+  if ([pluginResult.status intValue] == SQLiteStatus_ERROR) {
+      error(@[pluginResult.message]);
+  }
+  else {
+      success(@[pluginResult.message]);
+  }
 }
 
 -(SQLiteResult *) executeSqlWithDict: (NSMutableDictionary*)options andArgs: (NSMutableDictionary*)dbargs
